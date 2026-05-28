@@ -1,0 +1,21 @@
+# 環境変数・シークレット
+.env
+.env.*
+*.pem
+*.key
+
+# 依存・ビルド成果物
+node_modules/
+.next/
+dist/
+build/
+__pycache__/
+
+# ログ・DBダンプ
+*.log
+*.db
+*.sqlite
+*.dump
+
+# OS
+.DS_Store
