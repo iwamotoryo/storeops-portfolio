@@ -1,0 +1,21 @@
+# HTTP response headers for static hosting.
+#
+# This file is read by Cloudflare Pages and Netlify (same syntax).
+# GitHub Pages IGNORES it — GitHub Pages cannot set custom response headers,
+# so frame-ancestors / X-Frame-Options cannot be enforced there.
+# See docs/demo-hosting.md before publishing.
+
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-origin
+  Permissions-Policy: accelerometer=(), autoplay=(), browsing-topics=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(), gamepad=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), local-fonts=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), serial=(), storage-access=(), usb=(), xr-spatial-tracking=()
+  Content-Security-Policy: default-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'
+
+# デモ本体はより厳しく締める。外部通信は connect-src 'none' で完全に禁止。
+# script-src / style-src は 'unsafe-inline' なし（CSS と JS を別ファイルに分けてあるため成立する）。
+/demo/takken/*
+  X-Robots-Tag: noindex, nofollow
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; media-src 'none'; child-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'
