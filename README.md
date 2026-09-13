@@ -19,7 +19,7 @@
 | 1 | [美容室向け業務管理システム](case-studies/salon-admin.md)（moon hair） | `Production` | 要件整理〜実装・本番運用 | Notion等からの移行 / 会計・値引き / 指名売上レポート |
 | 2 | [ドッグサロン向け予約・顧客管理システム](case-studies/dogsalon-admin.md)（moon fur） | `Production` | 要件定義〜実装・本番運用 | LINE Login・LIFF / 複数ペット / 犬種×コース料金 / ホテル |
 | 3 | [レンタカー予約・会員・管理システム](case-studies/rentacar-system.md) | `Production` | 要件整理〜実装・VPS運用 | 空き判定 / 料金計算 / LINE Mini App |
-| 4 | [宅建学習・分析システム](case-studies/takken-training.md) | `Beta` | 企画〜実装・テスト | 肢単位の分析 / ローカルファースト / CI |
+| 4 | [宅建学習・分析システム](case-studies/takken-training.md)（[▶ デモ](demo/takken/index.html)） | `Beta` | 企画〜実装・テスト | 肢単位の分析 / ローカルファースト / CI |
 | 5 | [介護用品レンタル会社の業務改善・DX](case-studies/care-dx-planning.md) | `Case Study` | 現状分析・要件定義・設計・導入計画 | ヒアリング / 業務フロー / v1範囲定義 |
 | 6 | [自治体向けフリーランス育成事業](case-studies/rocks-municipal-education.md)（Rocks合同会社） | `Business` | 企画・提案・PM・運営 | 新規事業 / 自治体受託 / 教育 |
 

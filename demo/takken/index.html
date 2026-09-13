@@ -1,0 +1,1096 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>宅建学習・分析システム — ポートフォリオ用デモ</title>
+<style>
+/* ------------------------------------------------------------------
+   ポートフォリオ用デモ（単一HTML・外部通信なし・依存ライブラリなし）
+   本番システムのコード・データ・認証・APIとは完全に独立している。
+------------------------------------------------------------------ */
+:root{
+  --bg:#F6F7F9; --surface:#FFFFFF; --surface-muted:#F1F5F9;
+  --fg:#0F172A; --fg-muted:#64748B; --border:#E2E8F0;
+  --brand:#1D4ED8; --brand-soft:#EFF6FF;
+  --stable:#16A34A; --risk:#D97706; --wrong:#DC2626; --na:#94A3B8; --muted-cell:#F8FAFC;
+  --demo:#7C3AED; --demo-soft:#F5F3FF;
+  --radius:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,sans-serif;
+  font-size:14px; line-height:1.7; -webkit-text-size-adjust:100%;
+}
+h1,h2,h3{line-height:1.4;margin:0}
+button{font:inherit;color:inherit}
+table{border-collapse:collapse}
+
+/* ---- デモ帯（常時表示） ---- */
+.demobar{
+  background:var(--demo); color:#fff; padding:6px 12px; font-size:12px;
+  display:flex; gap:8px; align-items:center; justify-content:center; text-align:center; flex-wrap:wrap;
+}
+.demobar strong{font-weight:700}
+
+/* ---- ヘッダ ---- */
+header.app{
+  position:sticky; top:0; z-index:30; background:var(--surface);
+  border-bottom:1px solid var(--border);
+}
+.head-row{
+  max-width:1080px; margin:0 auto; padding:10px 12px;
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+}
+.brand{font-weight:700; font-size:15px; white-space:nowrap}
+.badge{
+  display:inline-block; padding:1px 8px; border-radius:999px; font-size:11px; font-weight:700;
+  background:var(--demo-soft); color:var(--demo); border:1px solid #DDD6FE; white-space:nowrap;
+}
+.spacer{flex:1}
+.btn{
+  background:var(--surface); border:1px solid var(--border); border-radius:8px;
+  padding:6px 12px; cursor:pointer; font-size:13px;
+}
+.btn:hover{background:var(--surface-muted)}
+.btn.primary{background:var(--brand); color:#fff; border-color:var(--brand)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--wrong); border-color:#FECACA}
+.btn.danger:hover{background:#FEF2F2}
+.btn[aria-pressed="true"]{background:var(--brand); color:#fff; border-color:var(--brand)}
+.btn:disabled{opacity:.45; cursor:not-allowed}
+
+/* ---- ナビ ---- */
+nav.tabs{
+  max-width:1080px; margin:0 auto; padding:0 6px 8px;
+  display:flex; gap:4px; overflow-x:auto; -webkit-overflow-scrolling:touch;
+}
+nav.tabs::-webkit-scrollbar{height:0}
+nav.tabs a{
+  padding:6px 11px; border-radius:8px; font-size:13px; white-space:nowrap;
+  text-decoration:none; color:var(--fg-muted);
+}
+nav.tabs a:hover{background:var(--surface-muted)}
+nav.tabs a.on{background:var(--brand-soft); color:var(--brand); font-weight:700}
+
+/* ---- レイアウト ---- */
+main{max-width:1080px; margin:0 auto; padding:16px 12px 64px}
+.page-title{font-size:19px; font-weight:700; margin-bottom:2px}
+.page-desc{color:var(--fg-muted); font-size:13px; margin-bottom:14px}
+.card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; margin-bottom:12px}
+.card h3{font-size:14px; margin-bottom:8px}
+.grid{display:grid; gap:12px}
+.grid.c2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.grid.c3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.grid.c4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:820px){.grid.c3,.grid.c4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.grid.c2,.grid.c3,.grid.c4{grid-template-columns:1fr}}
+.stat{font-size:24px; font-weight:700; line-height:1.2}
+.stat small{font-size:12px; font-weight:400; color:var(--fg-muted)}
+.label{font-size:12px; color:var(--fg-muted)}
+.muted{color:var(--fg-muted)}
+.small{font-size:12px}
+.scroll-x{overflow-x:auto; -webkit-overflow-scrolling:touch}
+.note{
+  background:var(--surface-muted); border:1px solid var(--border); border-left:3px solid var(--brand);
+  border-radius:8px; padding:9px 11px; font-size:12px; color:var(--fg-muted); margin-bottom:12px;
+}
+
+/* ---- 表 ---- */
+table.data{width:100%; font-size:13px; min-width:420px}
+table.data th,table.data td{padding:7px 8px; border-bottom:1px solid var(--border); text-align:left}
+table.data th{background:var(--surface-muted); color:var(--fg-muted); font-size:12px; font-weight:600}
+table.data td.num,table.data th.num{text-align:right; font-variant-numeric:tabular-nums}
+tr.self{background:var(--brand-soft)}
+
+/* ---- 出題 ---- */
+.stem{font-size:15px; line-height:1.8; margin-bottom:12px}
+.stmt{border:1px solid var(--border); border-radius:9px; padding:10px; margin-bottom:9px; background:var(--surface)}
+.stmt-text{font-size:13.5px; margin-bottom:8px}
+.marks{display:flex; gap:6px; flex-wrap:wrap}
+.mark{
+  min-width:44px; padding:6px 10px; border:1px solid var(--border); background:var(--surface);
+  border-radius:8px; cursor:pointer; font-size:13px;
+}
+.mark[aria-pressed="true"]{background:var(--fg); color:#fff; border-color:var(--fg)}
+.opts{display:flex; gap:8px; flex-wrap:wrap; margin-top:6px}
+.opt{
+  flex:1 1 auto; min-width:64px; padding:10px 12px; border:1px solid var(--border);
+  background:var(--surface); border-radius:9px; cursor:pointer; font-size:14px;
+}
+.opt[aria-pressed="true"]{background:var(--brand); color:#fff; border-color:var(--brand); font-weight:700}
+.qnav{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px}
+.qnav button{
+  width:34px; height:34px; border:1px solid var(--border); background:var(--surface);
+  border-radius:8px; cursor:pointer; font-size:13px;
+}
+.qnav button.done{background:#DCFCE7; border-color:#BBF7D0}
+.qnav button.cur{outline:2px solid var(--brand); outline-offset:1px}
+.timer{font-variant-numeric:tabular-nums; font-weight:700; font-size:16px}
+
+/* ---- 問題マップ ---- */
+.qmap{display:grid; grid-template-columns:repeat(10,minmax(0,1fr)); gap:4px}
+@media(max-width:520px){.qmap{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.qcell{
+  aspect-ratio:1/1; border-radius:6px; border:1px solid var(--border);
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:600; color:#fff;
+}
+.qcell.dim{color:#CBD5E1; background:var(--muted-cell) !important; border-color:var(--border)}
+.legend{display:flex; gap:6px; flex-wrap:wrap; margin:10px 0}
+.legend button{
+  display:flex; align-items:center; gap:6px; padding:5px 10px; font-size:12px;
+  border:1px solid var(--border); background:var(--surface); border-radius:999px; cursor:pointer;
+}
+.legend button[aria-pressed="false"]{opacity:.45; text-decoration:line-through}
+.dot{width:10px; height:10px; border-radius:3px; display:inline-block}
+
+/* ---- ヒートマップ ---- */
+table.heat{width:100%; font-size:12px; min-width:520px}
+table.heat th,table.heat td{border:1px solid var(--border); padding:5px 7px; text-align:center}
+table.heat th:first-child,table.heat td:first-child{text-align:left; white-space:nowrap}
+table.heat th{background:var(--surface-muted); font-weight:600; font-size:11px}
+
+/* ---- モーダル ---- */
+.overlay{
+  position:fixed; inset:0; background:rgba(15,23,42,.5); z-index:60;
+  display:flex; align-items:center; justify-content:center; padding:16px;
+}
+.modal{background:var(--surface); border-radius:12px; padding:18px; max-width:420px; width:100%}
+.modal h3{font-size:16px; margin-bottom:8px}
+.modal p{font-size:13px; color:var(--fg-muted); margin:0 0 14px}
+.modal .row{display:flex; gap:8px; justify-content:flex-end}
+
+footer.app{
+  max-width:1080px; margin:0 auto; padding:20px 12px 40px;
+  color:var(--fg-muted); font-size:12px; border-top:1px solid var(--border);
+}
+</style>
+</head>
+<body>
+
+<div class="demobar">
+  <strong>ポートフォリオ用デモ</strong>
+  <span>表示されている人物・成績・問題・学習履歴はすべてデモデータです（架空）。</span>
+</div>
+
+<header class="app">
+  <div class="head-row">
+    <span class="brand">宅建学習・分析システム</span>
+    <span class="badge">DEMO</span>
+    <span class="spacer"></span>
+    <button class="btn danger" id="resetBtn" type="button">デモをリセット</button>
+  </div>
+  <nav class="tabs" id="tabs"></nav>
+</header>
+
+<main id="view"></main>
+
+<footer class="app">
+  ポートフォリオ用のデモです。ログイン不要・データはこのブラウザ内のみに保存されます（デモ専用の保存領域）。<br />
+  実運用中のシステム・実在の受講生・実際の宅建試験の問題文とは無関係です。
+</footer>
+
+<script>
+"use strict";
+/* ==================================================================
+   0. デモ専用の保存領域
+   本番アプリの保存名（IndexedDB / localStorage）とは重複しない接頭辞のみ使う。
+================================================================== */
+var DEMO_PREFIX = "portfolio-takken-demo-";
+var STATE_KEY = DEMO_PREFIX + "state-v1";
+
+function loadState(){
+  try{
+    var raw = localStorage.getItem(STATE_KEY);
+    if(!raw) return {};
+    var v = JSON.parse(raw);
+    return (v && typeof v === "object") ? v : {};
+  }catch(e){ return {}; }
+}
+function saveState(){
+  try{ localStorage.setItem(STATE_KEY, JSON.stringify(S)); }catch(e){ /* 保存できなくても表示は続ける */ }
+}
+function resetDemo(){
+  try{
+    var kill = [];
+    for(var i=0;i<localStorage.length;i++){
+      var k = localStorage.key(i);
+      if(k && k.indexOf(DEMO_PREFIX) === 0) kill.push(k);
+    }
+    kill.forEach(function(k){ localStorage.removeItem(k); });
+  }catch(e){}
+  S = defaultState();
+  // ここで saveState() は呼ばない。呼ぶと、消したばかりのキーをすぐ作り直してしまう。
+  // 次に操作したときに保存されるので、そのまま閉じれば保存領域には何も残らない。
+}
+function defaultState(){
+  return { attempt:null, results:[], reviewDone:{}, qmap:{ mode:"FOUR", hidden:[] }, heat:{ sort:null, dir:"WEAK" }, peerView:"TABLE" };
+}
+
+/* ==================================================================
+   1. 架空データ
+   実際の宅建試験の問題文・解説・正答は一切含まない。
+   科目の構成（何問ずつ出るか）と論点名は一般に公開された試験範囲の区分で、
+   問題文そのものは機能確認用に作成した架空の文言。
+================================================================== */
+
+/* --- 1-1. 体験用ミニ模試（5問） --- */
+/* 肢の文言は「この肢はデモ上どちら扱いか」を明示した架空データ。
+   実際の法令解釈・正誤の主張はしていない。 */
+var MINI = [
+  {
+    n:1, subject:"宅建業法", topic:"媒介契約", type:"SELECT_TRUE",
+    stem:"【架空・デモ用】宅地建物取引業者が売主から媒介の依頼を受けた場合に関する次の記述のうち、正しいものはどれか。",
+    statements:[
+      { o:1, topic:"媒介契約",     text:"デモ肢1（媒介契約の書面）：このデモでは【誤りの肢】として設定しています。", truth:false },
+      { o:2, topic:"媒介契約",     text:"デモ肢2（専任媒介の有効期間）：このデモでは【誤りの肢】として設定しています。", truth:false },
+      { o:3, topic:"媒介契約",     text:"デモ肢3（書面の作成と交付）：このデモでは【正しい肢】として設定しています。", truth:true  },
+      { o:4, topic:"業務処理状況",  text:"デモ肢4（業務処理状況の報告）：このデモでは【誤りの肢】として設定しています。", truth:false }
+    ],
+    options:[{o:1,label:"1"},{o:2,label:"2"},{o:3,label:"3"},{o:4,label:"4"}],
+    correct:3, hasKey:true
+  },
+  {
+    n:2, subject:"権利関係", topic:"意思表示", type:"SELECT_FALSE",
+    stem:"【架空・デモ用】意思表示に関する次の記述のうち、誤っているものはどれか。",
+    statements:[
+      { o:1, topic:"意思表示", text:"デモ肢1：このデモでは【正しい肢】として設定しています。", truth:true  },
+      { o:2, topic:"代理",     text:"デモ肢2：このデモでは【誤りの肢】として設定しています。", truth:false },
+      { o:3, topic:"時効",     text:"デモ肢3：このデモでは【正しい肢】として設定しています。", truth:true  },
+      { o:4, topic:"物権変動", text:"デモ肢4：このデモでは【正しい肢】として設定しています。", truth:true  }
+    ],
+    options:[{o:1,label:"1"},{o:2,label:"2"},{o:3,label:"3"},{o:4,label:"4"}],
+    correct:2, hasKey:true
+  },
+  {
+    /* 個数問題：選択肢は「肢」ではなく個数。肢に付けた ○×△？ から最終回答は自動で決まらない。 */
+    n:3, subject:"宅建業法", topic:"重要事項説明", type:"COUNT_TRUE",
+    stem:"【架空・デモ用】次のア〜エの記述のうち、正しいものはいくつあるか。",
+    statements:[
+      { o:1, label:"ア", topic:"重要事項説明", text:"デモ肢ア：このデモでは【正しい肢】として設定しています。", truth:true  },
+      { o:2, label:"イ", topic:"重要事項説明", text:"デモ肢イ：このデモでは【正しい肢】として設定しています。", truth:true  },
+      { o:3, label:"ウ", topic:"37条書面",     text:"デモ肢ウ：このデモでは【誤りの肢】として設定しています。", truth:false },
+      { o:4, label:"エ", topic:"37条書面",     text:"デモ肢エ：このデモでは【誤りの肢】として設定しています。", truth:false }
+    ],
+    options:[{o:1,label:"一つ"},{o:2,label:"二つ"},{o:3,label:"三つ"},{o:4,label:"四つ"}],
+    correct:2, hasKey:true
+  },
+  {
+    n:4, subject:"法令上の制限", topic:"都市計画法", type:"SELECT_FALSE",
+    stem:"【架空・デモ用】都市計画法に関する次の記述のうち、誤っているものはどれか。",
+    statements:[
+      { o:1, topic:"都市計画法", text:"デモ肢1：このデモでは【正しい肢】として設定しています。", truth:true  },
+      { o:2, topic:"開発許可",   text:"デモ肢2：このデモでは【正しい肢】として設定しています。", truth:true  },
+      { o:3, topic:"開発許可",   text:"デモ肢3：このデモでは【誤りの肢】として設定しています。", truth:false },
+      { o:4, topic:"建築基準法", text:"デモ肢4：このデモでは【正しい肢】として設定しています。", truth:true  }
+    ],
+    options:[{o:1,label:"1"},{o:2,label:"2"},{o:3,label:"3"},{o:4,label:"4"}],
+    correct:3, hasKey:true
+  },
+  {
+    /* 採点不可の実演：公式正答が無い問題は「0点」ではなく母数から外す。 */
+    n:5, subject:"5問免除", topic:"統計", type:"SELECT_TRUE",
+    stem:"【架空・デモ用】統計に関する次の記述のうち、正しいものはどれか。（この問はデモ上「公式正答なし」として登録しています）",
+    statements:[
+      { o:1, topic:"統計", text:"デモ肢1：この問は正答キーを持たないため、肢の正誤も設定していません。", truth:null },
+      { o:2, topic:"統計", text:"デモ肢2：この問は正答キーを持たないため、肢の正誤も設定していません。", truth:null },
+      { o:3, topic:"統計", text:"デモ肢3：この問は正答キーを持たないため、肢の正誤も設定していません。", truth:null },
+      { o:4, topic:"統計", text:"デモ肢4：この問は正答キーを持たないため、肢の正誤も設定していません。", truth:null }
+    ],
+    options:[{o:1,label:"1"},{o:2,label:"2"},{o:3,label:"3"},{o:4,label:"4"}],
+    correct:null, hasKey:false
+  }
+];
+
+/* --- 1-2. 50問の実力測定（架空の履歴 4件） --- */
+/* 科目ごとの出題数は公開されている試験範囲の区分。問48 は「出典が省略」＝採点不可の実演。 */
+var BLUEPRINT = [
+  { subject:"権利関係",     from:1,  to:14, topics:["意思表示","代理","時効","物権変動","抵当権","債務不履行","契約不適合責任","相続","借地借家法","区分所有法","不動産登記法"] },
+  { subject:"法令上の制限", from:15, to:22, topics:["都市計画法","開発許可","建築基準法","国土利用計画法","農地法","土地区画整理法","宅地造成"] },
+  { subject:"税・その他",   from:23, to:25, topics:["不動産取得税","印紙税","地価公示"] },
+  { subject:"宅建業法",     from:26, to:45, topics:["免許","宅建士","営業保証金","保証協会","媒介契約","広告規制","重要事項説明","37条書面","8種制限","クーリング・オフ","報酬","監督処分"] },
+  { subject:"5問免除",      from:46, to:50, topics:["住宅金融支援機構","景品表示法","統計","土地","建物"] }
+];
+var UNSCORABLE_Q = 48;                 // 出典が省略 → 採点対象外（0点ではない）
+var UNSCORABLE_REASON = "出典が省略";
+var SUBJECTS = ["宅建業法","法令上の制限","権利関係","税・その他","5問免除"];
+/* 科目別の目標（本番アプリの既定値と同じ考え方。予想合格点ではなく個人の安全目標） */
+var TARGETS = {
+  "宅建業法":{t:18,max:20}, "法令上の制限":{t:7,max:8}, "権利関係":{t:8,max:14},
+  "税・その他":{t:2,max:3}, "5問免除":{t:4,max:4}
+};
+
+/* 各測定で科目ごとに何問正解したか（合計＝31 / 34 / 36 / 38、満点はいずれも49） */
+var CORRECT_BY_SUBJECT = [
+  { id:"m1", title:"デモ実力測定 第1回", date:"2026-06-14", n:{ "権利関係":5, "法令上の制限":4, "税・その他":1, "宅建業法":17, "5問免除":4 } },
+  { id:"m2", title:"デモ実力測定 第2回", date:"2026-07-12", n:{ "権利関係":6, "法令上の制限":5, "税・その他":1, "宅建業法":18, "5問免除":4 } },
+  { id:"m3", title:"デモ実力測定 第3回", date:"2026-08-09", n:{ "権利関係":6, "法令上の制限":5, "税・その他":2, "宅建業法":19, "5問免除":4 } },
+  { id:"m4", title:"デモ実力測定 第4回", date:"2026-09-06", n:{ "権利関係":7, "法令上の制限":6, "税・その他":2, "宅建業法":19, "5問免除":4 } }
+];
+
+/* 決定的な擬似乱数（毎回同じデモになるように） */
+function rng(seed){
+  var a = seed >>> 0;
+  return function(){
+    a += 0x6D2B79F5; a = a >>> 0;
+    var t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function subjectOf(n){
+  for(var i=0;i<BLUEPRINT.length;i++){ if(n>=BLUEPRINT[i].from && n<=BLUEPRINT[i].to) return BLUEPRINT[i].subject; }
+  return "";
+}
+function topicOf(n){
+  for(var i=0;i<BLUEPRINT.length;i++){
+    var b = BLUEPRINT[i];
+    if(n>=b.from && n<=b.to) return b.topics[(n - b.from) % b.topics.length];
+  }
+  return "";
+}
+
+/* 4分類：安定正解 / 正解だが要復習 / 不正解 / 採点不可 */
+function buildMeasurements(){
+  return CORRECT_BY_SUBJECT.map(function(m, mi){
+    var r = rng(1000 + mi * 37);
+    var perQ = {};
+    BLUEPRINT.forEach(function(b){
+      var pool = [];
+      for(var n=b.from; n<=b.to; n++){
+        if(n === UNSCORABLE_Q){ perQ[n] = { state:"UNAVAILABLE", reason:UNSCORABLE_REASON, marks:{} }; continue; }
+        pool.push({ n:n, k:r() });
+      }
+      pool.sort(function(a,c){ return c.k - a.k; });           // 決定的に「正解した問」を選ぶ
+      var want = m.n[b.subject] || 0;
+      pool.forEach(function(p, i){
+        var correct = i < want;
+        // 正解のうち一部は「迷った／分からない肢」を含む＝正解だが要復習
+        var risky = correct && (p.k * 7919 % 1) > 0.66;
+        perQ[p.n] = { state: correct ? (risky ? "RISK" : "STABLE") : "WRONG", marks:{} };
+      });
+    });
+    // 肢の判断の内訳（弱点率の材料）を決定的に作る
+    var r2 = rng(5000 + mi * 91);
+    for(var n=1; n<=50; n++){
+      var q = perQ[n];
+      if(q.state === "UNAVAILABLE"){ q.cell = { allMarks:0, aligned:0, misconception:0, uncertain:0, unknown:0 }; continue; }
+      var all = 4;
+      var mis = q.state === "WRONG" ? 1 + Math.floor(r2()*2) : (q.state === "RISK" ? Math.floor(r2()*2) : 0);
+      var unc = q.state === "RISK" ? 1 + Math.floor(r2()*2) : Math.floor(r2()*1.4);
+      var unk = q.state === "WRONG" ? Math.floor(r2()*2) : 0;
+      if(mis + unc + unk > all) { unk = 0; unc = Math.max(0, all - mis); }
+      q.cell = { allMarks:all, aligned: all - mis - unc - unk, misconception:mis, uncertain:unc, unknown:unk };
+    }
+    var correctCount = 0, scorable = 0;
+    for(var k=1;k<=50;k++){
+      if(perQ[k].state === "UNAVAILABLE") continue;
+      scorable++;
+      if(perQ[k].state !== "WRONG") correctCount++;
+    }
+    return { id:m.id, title:m.title, date:m.date, perQ:perQ, score:correctCount, max:scorable };
+  });
+}
+var MEASUREMENTS = buildMeasurements();
+var LATEST = MEASUREMENTS[MEASUREMENTS.length - 1];
+
+/* --- 1-3. みんなの成績（架空の教室・架空の受講生） --- */
+var PEERS = [
+  { name:"山田 太郎",  score:41, max:49, count:4, date:"2026-09-06" },
+  { name:"佐藤 花子",  score:44, max:49, count:4, date:"2026-09-07" },
+  { name:"鈴木 一郎",  score:33, max:49, count:3, date:"2026-09-05" },
+  { name:"田中 美咲",  score:36, max:49, count:4, date:"2026-09-06" },
+  { name:"高橋 健",    score:29, max:49, count:2, date:"2026-08-30" },
+  { name:"あなた（デモ）", score:LATEST.score, max:LATEST.max, count:MEASUREMENTS.length, date:LATEST.date, self:true }
+];
+var PEER_CLASSROOM = "デモ教室 2026年度（架空）";
+
+/* --- 1-4. 用語辞書（架空データではなく、試験範囲の一般的な用語の説明） --- */
+var GLOSSARY = [
+  { term:"宅地建物取引業",   reading:"たくちたてものとりひきぎょう", body:"宅地・建物の売買や交換、売買・交換・貸借の代理や媒介を、業として行うこと。デモ用の簡略な説明です。" },
+  { term:"媒介契約",         reading:"ばいかいけいやく",           body:"宅地建物取引業者が、売買などの相手方を探すことを依頼者から引き受ける契約。一般・専任・専属専任の型がある。" },
+  { term:"重要事項説明",     reading:"じゅうようじこうせつめい",   body:"契約の前に、取引の判断に影響する事項を書面などで説明する手続き。" },
+  { term:"クーリング・オフ", reading:"くーりんぐおふ",             body:"一定の場所でした申込み・契約を、条件を満たす間は撤回・解除できる制度。" },
+  { term:"開発許可",         reading:"かいはつきょか",             body:"一定規模以上の土地の区画形質の変更について、あらかじめ受ける必要がある許可。" },
+  { term:"区分所有",         reading:"くぶんしょゆう",             body:"1棟の建物を構造上・利用上分けて、それぞれを所有すること。マンションが典型。" },
+  { term:"抵当権",           reading:"ていとうけん",               body:"債務の担保として不動産に設定し、返済されないときに優先して弁済を受けられる権利。" },
+  { term:"固定資産税評価額", reading:"こていしさんぜいひょうかがく", body:"市町村が定める、固定資産税などの計算の基礎となる評価額。" }
+];
+
+/* ==================================================================
+   2. 判定ロジック（本番アプリと同じ「考え方」を、デモ用に書き起こしたもの）
+   採点できない理由は「出典が省略」「公式正答なし」の2つだけ。
+   「統計だから」といった内容の属性では採点対象から外さない。
+================================================================== */
+var OUTCOME = {
+  STABLE:      { label:"安定正解",       color:"var(--stable)" },
+  RISK:        { label:"正解だが要復習", color:"var(--risk)"   },
+  WRONG:       { label:"不正解",         color:"var(--wrong)"  },
+  UNAVAILABLE: { label:"採点不可",       color:"var(--na)"     }
+};
+var BINARY = {
+  CORRECT:     { label:"正解",     color:"var(--stable)" },
+  WRONG:       { label:"不正解",   color:"var(--wrong)"  },
+  UNAVAILABLE: { label:"採点不可", color:"var(--na)"     }
+};
+function bucketOf(state, mode){
+  if(mode === "FOUR") return state;
+  if(state === "UNAVAILABLE") return "UNAVAILABLE";
+  return state === "WRONG" ? "WRONG" : "CORRECT";
+}
+function bucketMeta(key, mode){ return (mode === "FOUR" ? OUTCOME : BINARY)[key]; }
+function bucketList(mode){
+  return mode === "FOUR"
+    ? ["STABLE","RISK","WRONG","UNAVAILABLE"]
+    : ["CORRECT","WRONG","UNAVAILABLE"];
+}
+/* 弱点率＝(勘違い＋迷い＋分からない)/判断した肢。数値にならないものは null（0%と言い切らない）。 */
+function weaknessRate(cell){
+  if(!cell || cell.allMarks === 0) return null;
+  var judged = cell.aligned + cell.misconception + cell.uncertain + cell.unknown;
+  if(judged === 0) return null;
+  return (cell.misconception + cell.uncertain + cell.unknown) / judged;
+}
+function averageRate(list){
+  var xs = list.filter(function(v){ return v !== null && v !== undefined; });
+  if(!xs.length) return null;
+  return xs.reduce(function(a,b){ return a+b; }, 0) / xs.length;
+}
+function pct(v, digits){ return v === null || v === undefined ? "—" : (v*100).toFixed(digits||0) + "%"; }
+
+/* 科目別の集計（採点対象のみ） */
+function subjectBreakdown(meas){
+  return SUBJECTS.map(function(s){
+    var correct = 0, total = 0;
+    for(var n=1;n<=50;n++){
+      if(subjectOf(n) !== s) continue;
+      var q = meas.perQ[n];
+      if(q.state === "UNAVAILABLE") continue;
+      total++;
+      if(q.state !== "WRONG") correct++;
+    }
+    var tg = TARGETS[s] || { t:0, max:total };
+    return { subject:s, correct:correct, total:total, rate: total ? correct/total : null, targetRate: tg.max ? tg.t/tg.max : null, target:tg.t, max:tg.max };
+  });
+}
+
+/* ==================================================================
+   3. 画面
+================================================================== */
+var S = Object.assign(defaultState(), loadState());
+var ROUTES = [
+  { id:"dashboard", label:"ダッシュボード" },
+  { id:"exam",      label:"模試を受ける"   },
+  { id:"result",    label:"結果"           },
+  { id:"qmap",      label:"問題マップ"     },
+  { id:"analysis",  label:"科目・単元分析" },
+  { id:"weak",      label:"弱点"           },
+  { id:"review",    label:"復習"           },
+  { id:"glossary",  label:"用語辞書"       },
+  { id:"peers",     label:"みんなの成績"   }
+];
+function currentRoute(){
+  var h = (location.hash || "").replace(/^#\/?/, "");
+  return ROUTES.some(function(r){ return r.id === h; }) ? h : "dashboard";
+}
+function go(id){ location.hash = "#/" + id; }
+function esc(s){
+  return String(s).replace(/[&<>"']/g, function(c){
+    return ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" })[c];
+  });
+}
+function el(html){ var d = document.createElement("div"); d.innerHTML = html; return d.firstElementChild; }
+
+function renderTabs(){
+  var cur = currentRoute();
+  document.getElementById("tabs").innerHTML = ROUTES.map(function(r){
+    return '<a href="#/' + r.id + '" class="' + (r.id === cur ? "on" : "") + '">' + esc(r.label) + "</a>";
+  }).join("");
+}
+
+/* ---------------- ダッシュボード ---------------- */
+function viewDashboard(){
+  var v = document.getElementById("view");
+  var sb = subjectBreakdown(LATEST);
+  var weakest = sb.slice().filter(function(x){ return x.rate !== null; })
+    .sort(function(a,b){ return (a.rate - a.targetRate) - (b.rate - b.targetRate); })[0];
+  var riskCount = 0;
+  for(var n=1;n<=50;n++){ if(LATEST.perQ[n].state === "RISK") riskCount++; }
+
+  v.innerHTML =
+    '<div class="page-title">ダッシュボード</div>' +
+    '<div class="page-desc">デモ用の学習状況です。すべて架空のデータです。</div>' +
+    '<div class="note">このデモは、正解／不正解だけでなく <b>肢ごとの判断（正・誤・△・？）</b> を記録して弱点を出す、という考え方を体験するためのものです。</div>' +
+    '<div class="grid c4">' +
+      card('<div class="label">最新の実力測定</div><div class="stat">' + LATEST.score + ' <small>/ ' + LATEST.max + '</small></div><div class="label">' + esc(LATEST.title) + '</div>') +
+      card('<div class="label">得点率</div><div class="stat">' + pct(LATEST.score/LATEST.max) + '</div><div class="label">採点対象のみで計算</div>') +
+      card('<div class="label">正解だが要復習</div><div class="stat" style="color:var(--risk)">' + riskCount + ' <small>問</small></div><div class="label">正解＝理解とは限らない</div>') +
+      card('<div class="label">採点不可</div><div class="stat" style="color:var(--na)">1 <small>問</small></div><div class="label">' + esc(UNSCORABLE_REASON) + '（0点にしない）</div>') +
+    '</div>' +
+    '<div class="grid c2">' +
+      card('<h3>得点の推移（架空）</h3>' + sparkline() +
+           '<table class="data" style="min-width:0;margin-top:10px"><tbody>' +
+           MEASUREMENTS.map(function(m){
+             return '<tr><td>' + esc(m.title) + '</td><td class="muted small">' + esc(m.date) + '</td>' +
+                    '<td class="num"><b>' + m.score + '</b> / ' + m.max + '</td>' +
+                    '<td class="num">' + pct(m.score/m.max) + '</td></tr>';
+           }).join("") + '</tbody></table>') +
+      card('<h3>いま優先する科目</h3>' +
+           (weakest ? '<div class="stat" style="font-size:20px">' + esc(weakest.subject) + '</div>' +
+             '<div class="label">現在 ' + weakest.correct + ' / ' + weakest.total + '（' + pct(weakest.rate) + '）・目標 ' + pct(weakest.targetRate) + '</div>' : "") +
+           '<div style="margin-top:12px" class="small muted">目標値は「予想合格点」ではなく、自分で決めた安全ラインです。</div>' +
+           '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">' +
+             '<button class="btn primary" type="button" data-go="exam">体験ミニ模試を始める</button>' +
+             '<button class="btn" type="button" data-go="analysis">科目・単元分析を見る</button>' +
+           '</div>') +
+    '</div>';
+  bindGo(v);
+}
+function card(inner){ return '<div class="card">' + inner + '</div>'; }
+function sparkline(){
+  var w = 260, h = 70, pad = 6;
+  var xs = MEASUREMENTS.map(function(m,i){ return pad + i * ((w - pad*2) / (MEASUREMENTS.length - 1)); });
+  var ys = MEASUREMENTS.map(function(m){ return h - pad - (m.score / m.max) * (h - pad*2); });
+  var d = xs.map(function(x,i){ return (i ? "L" : "M") + x.toFixed(1) + " " + ys[i].toFixed(1); }).join(" ");
+  return '<svg viewBox="0 0 ' + w + ' ' + h + '" width="100%" height="80" role="img" aria-label="得点の推移（架空データ）">' +
+    '<path d="' + d + '" fill="none" stroke="var(--brand)" stroke-width="2" />' +
+    xs.map(function(x,i){ return '<circle cx="' + x.toFixed(1) + '" cy="' + ys[i].toFixed(1) + '" r="3" fill="var(--brand)" />'; }).join("") +
+    '</svg>';
+}
+function bindGo(root){
+  root.querySelectorAll("[data-go]").forEach(function(b){
+    b.addEventListener("click", function(){ go(b.getAttribute("data-go")); });
+  });
+}
+
+/* ---------------- 模試（開始 → 解答 → 採点） ---------------- */
+function newAttempt(){
+  return { startedAt: Date.now(), elapsed:0, paused:true, cur:0, marks:{}, finals:{}, flags:{}, submitted:false };
+}
+function viewExam(){
+  var v = document.getElementById("view");
+  if(!S.attempt){ return examStart(v); }
+  if(S.attempt.submitted){ return go("result"); }
+  return examRun(v);
+}
+function examStart(v){
+  v.innerHTML =
+    '<div class="page-title">体験ミニ模試</div>' +
+    '<div class="page-desc">全5問・架空データ。ログインは不要です。</div>' +
+    card('<h3>この体験でできること</h3>' +
+      '<ul style="margin:0 0 12px 18px;padding:0;font-size:13px">' +
+        '<li>各肢に <b>正 / 誤 / △（迷った）/ ？（分からない）</b> を付ける</li>' +
+        '<li>最終回答は肢の判断とは<b>別に</b>選ぶ（自動では入りません）</li>' +
+        '<li>カウントアップのタイマー（一時停止あり）</li>' +
+        '<li>採点では「公式正答が無い問題」を 0点にせず母数から外す</li>' +
+      '</ul>' +
+      '<div class="note" style="margin-bottom:12px">問題文・肢の文言は機能確認用の架空データです。実際の宅建試験の問題・解説・正答は含みません。</div>' +
+      '<button class="btn primary" type="button" id="startBtn">開始する</button>') +
+    card('<h3>これまでの体験結果</h3>' +
+      (S.results.length
+        ? '<table class="data" style="min-width:0"><tbody>' + S.results.map(function(r,i){
+            return '<tr><td>' + (i+1) + '回目</td><td class="num"><b>' + r.correct + '</b> / ' + r.scorable + '</td>' +
+                   '<td class="num">' + pct(r.correct/r.scorable) + '</td><td class="muted small">' + esc(r.at) + '</td></tr>';
+          }).join("") + '</tbody></table>'
+        : '<p class="muted small" style="margin:0">まだありません。</p>'));
+  v.querySelector("#startBtn").addEventListener("click", function(){
+    S.attempt = newAttempt(); S.attempt.paused = false; saveState(); render();
+  });
+}
+function fmtTime(ms){
+  var s = Math.floor(ms/1000), m = Math.floor(s/60);
+  return String(m).padStart(2,"0") + ":" + String(s % 60).padStart(2,"0");
+}
+var tickHandle = null;
+function examRun(v){
+  var a = S.attempt;
+  var q = MINI[a.cur];
+  var answered = MINI.filter(function(x){ return a.finals[x.n]; }).length;
+
+  v.innerHTML =
+    '<div class="page-title">体験ミニ模試</div>' +
+    '<div class="page-desc">問 ' + q.n + ' / ' + MINI.length + ' ・ ' + esc(q.subject) + ' ・ ' + esc(q.topic) + '</div>' +
+    '<div class="card" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
+      '<span class="timer" id="clock">00:00</span>' +
+      '<button class="btn" type="button" id="pauseBtn">' + (a.paused ? "再開" : "一時停止") + '</button>' +
+      '<span class="label">回答済み ' + answered + ' / ' + MINI.length + '</span>' +
+      '<span class="spacer"></span>' +
+      '<button class="btn" type="button" id="flagBtn" aria-pressed="' + (a.flags[q.n] ? "true" : "false") + '">' + (a.flags[q.n] ? "★ フラグ中" : "☆ フラグ") + '</button>' +
+    '</div>' +
+    '<div class="qnav">' + MINI.map(function(x,i){
+      return '<button type="button" data-jump="' + i + '" class="' + (a.finals[x.n] ? "done " : "") + (i === a.cur ? "cur" : "") + '">' + x.n + '</button>';
+    }).join("") + '</div>' +
+    '<div class="card">' +
+      '<div class="stem">' + esc(q.stem) + '</div>' +
+      q.statements.map(function(st){
+        var cur = (a.marks[q.n] || {})[st.o] || null;
+        return '<div class="stmt">' +
+          '<div class="stmt-text"><b>' + esc(st.label || st.o) + '</b>　' + esc(st.text) + '</div>' +
+          '<div class="marks">' +
+            ["TRUE","FALSE","UNCERTAIN","UNKNOWN"].map(function(mk){
+              var lab = { TRUE:"正", FALSE:"誤", UNCERTAIN:"△", UNKNOWN:"？" }[mk];
+              return '<button class="mark" type="button" data-mark="' + st.o + '" data-val="' + mk + '" aria-pressed="' + (cur === mk ? "true" : "false") + '">' + lab + '</button>';
+            }).join("") +
+          '</div></div>';
+      }).join("") +
+      '<h3 style="margin-top:14px">最終回答' + (q.type === "COUNT_TRUE" ? '（この問の選択肢は「個数」です）' : "") + '</h3>' +
+      '<div class="small muted" style="margin-bottom:6px">肢に付けた判断からは自動で入りません。自分で選んでください。</div>' +
+      '<div class="opts">' + q.options.map(function(op){
+        return '<button class="opt" type="button" data-final="' + op.o + '" aria-pressed="' + (a.finals[q.n] === op.o ? "true" : "false") + '">' + esc(op.label) + '</button>';
+      }).join("") + '</div>' +
+    '</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+      '<button class="btn" type="button" id="prevBtn"' + (a.cur === 0 ? " disabled" : "") + '>前の問題</button>' +
+      '<button class="btn" type="button" id="nextBtn"' + (a.cur === MINI.length-1 ? " disabled" : "") + '>次の問題</button>' +
+      '<span class="spacer"></span>' +
+      '<button class="btn primary" type="button" id="submitBtn">採点する</button>' +
+    '</div>';
+
+  v.querySelectorAll("[data-mark]").forEach(function(b){
+    b.addEventListener("click", function(){
+      var o = Number(b.getAttribute("data-mark")), val = b.getAttribute("data-val");
+      a.marks[q.n] = a.marks[q.n] || {};
+      a.marks[q.n][o] = (a.marks[q.n][o] === val) ? null : val;   // もう一度押すと解除
+      saveState(); render();
+    });
+  });
+  v.querySelectorAll("[data-final]").forEach(function(b){
+    b.addEventListener("click", function(){
+      var o = Number(b.getAttribute("data-final"));
+      a.finals[q.n] = (a.finals[q.n] === o) ? null : o;
+      saveState(); render();
+    });
+  });
+  v.querySelectorAll("[data-jump]").forEach(function(b){
+    b.addEventListener("click", function(){ a.cur = Number(b.getAttribute("data-jump")); saveState(); render(); });
+  });
+  v.querySelector("#prevBtn").addEventListener("click", function(){ a.cur = Math.max(0, a.cur-1); saveState(); render(); });
+  v.querySelector("#nextBtn").addEventListener("click", function(){ a.cur = Math.min(MINI.length-1, a.cur+1); saveState(); render(); });
+  v.querySelector("#flagBtn").addEventListener("click", function(){ a.flags[q.n] = !a.flags[q.n]; saveState(); render(); });
+  v.querySelector("#pauseBtn").addEventListener("click", function(){
+    if(!a.paused){ a.elapsed += Date.now() - a.startedAt; a.paused = true; }
+    else { a.startedAt = Date.now(); a.paused = false; }
+    saveState(); render();
+  });
+  v.querySelector("#submitBtn").addEventListener("click", function(){ gradeAttempt(); });
+
+  var clock = v.querySelector("#clock");
+  function paint(){ clock.textContent = fmtTime(a.elapsed + (a.paused ? 0 : Date.now() - a.startedAt)); }
+  paint();
+  if(tickHandle) clearInterval(tickHandle);
+  tickHandle = setInterval(paint, 500);
+}
+function gradeAttempt(){
+  var a = S.attempt;
+  if(!a.paused){ a.elapsed += Date.now() - a.startedAt; a.paused = true; }
+  var per = MINI.map(function(q){
+    var marks = a.marks[q.n] || {};
+    var final = a.finals[q.n] || null;
+    if(!q.hasKey) return { n:q.n, state:"UNAVAILABLE", reason:"公式正答なし", final:final, q:q, marks:marks };
+    var ok = final === q.correct;
+    var hesitated = q.statements.some(function(st){
+      var m = marks[st.o];
+      return m === "UNCERTAIN" || m === "UNKNOWN" || (m && st.truth !== null && ((m === "TRUE") !== (st.truth === true)));
+    });
+    return { n:q.n, state: ok ? (hesitated ? "RISK" : "STABLE") : "WRONG", final:final, q:q, marks:marks };
+  });
+  var scorable = per.filter(function(p){ return p.state !== "UNAVAILABLE"; }).length;
+  var correct = per.filter(function(p){ return p.state === "STABLE" || p.state === "RISK"; }).length;
+  a.submitted = true;
+  a.per = per; a.correct = correct; a.scorable = scorable;
+  S.results.push({ correct:correct, scorable:scorable, at:new Date().toLocaleString("ja-JP"), elapsed:a.elapsed });
+  saveState();
+  go("result");
+}
+
+/* ---------------- 結果 ---------------- */
+function viewResult(){
+  var v = document.getElementById("view");
+  var a = S.attempt;
+  if(!a || !a.submitted){
+    v.innerHTML = '<div class="page-title">結果</div>' +
+      card('<p class="muted" style="margin:0 0 12px">まだ体験ミニ模試を採点していません。</p>' +
+           '<button class="btn primary" type="button" data-go="exam">体験ミニ模試を始める</button>');
+    return bindGo(v);
+  }
+  var na = a.per.filter(function(p){ return p.state === "UNAVAILABLE"; }).length;
+  v.innerHTML =
+    '<div class="page-title">結果</div>' +
+    '<div class="page-desc">体験ミニ模試（架空データ）の採点結果です。</div>' +
+    '<div class="grid c4">' +
+      card('<div class="label">得点</div><div class="stat">' + a.correct + ' <small>/ ' + a.scorable + '</small></div><div class="label">採点対象のみ</div>') +
+      card('<div class="label">得点率</div><div class="stat">' + pct(a.correct/a.scorable) + '</div>') +
+      card('<div class="label">所要時間</div><div class="stat">' + fmtTime(a.elapsed) + '</div>') +
+      card('<div class="label">採点不可</div><div class="stat" style="color:var(--na)">' + na + ' <small>問</small></div><div class="label">母数から除外</div>') +
+    '</div>' +
+    '<div class="note"><b>採点できない理由は2つだけです。</b>「出典がその問を収録していない」「公式正答が無い」。内容の属性（統計だから等）では採点対象から外しません。正答が無い問題を 0点として扱うと、得点率が実力より低く出てしまうためです。</div>' +
+    card('<h3>問題ごとの結果</h3>' +
+      '<div class="scroll-x"><table class="data"><thead><tr><th>問</th><th>科目</th><th>あなたの回答</th><th>正答</th><th>判定</th></tr></thead><tbody>' +
+      a.per.map(function(p){
+        var meta = OUTCOME[p.state];
+        var finalLabel = p.final ? (p.q.options.find(function(o){ return o.o === p.final; }) || {}).label : "未回答";
+        var keyLabel = p.q.hasKey ? (p.q.options.find(function(o){ return o.o === p.q.correct; }) || {}).label : "—";
+        return '<tr><td>問' + p.n + '</td><td>' + esc(p.q.subject) + '</td><td>' + esc(finalLabel) + '</td><td>' + esc(keyLabel) + '</td>' +
+               '<td><span class="dot" style="background:' + meta.color + '"></span> ' + esc(meta.label) +
+               (p.reason ? ' <span class="muted small">(' + esc(p.reason) + ')</span>' : "") + '</td></tr>';
+      }).join("") + '</tbody></table></div>') +
+    card('<h3>肢ごとの判断</h3><div class="small muted" style="margin-bottom:8px">正解した問題でも、迷った肢・分からない肢があれば「正解だが要復習」として復習に回します。</div>' +
+      a.per.map(function(p){
+        return '<div class="stmt"><div class="stmt-text"><b>問' + p.n + '</b> ' + esc(p.q.topic) + '</div><div class="small">' +
+          p.q.statements.map(function(st){
+            var m = p.marks[st.o];
+            var lab = m ? ({ TRUE:"正", FALSE:"誤", UNCERTAIN:"△", UNKNOWN:"？" })[m] : "—";
+            var truth = st.truth === null ? "正誤なし" : (st.truth ? "正しい" : "誤り");
+            return '<div>' + esc(st.label || st.o) + '：あなたの判断 <b>' + lab + '</b> ／ デモ設定 ' + truth + '</div>';
+          }).join("") + '</div></div>';
+      }).join("")) +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+      '<button class="btn" type="button" data-go="review">復習に進む</button>' +
+      '<button class="btn" type="button" id="againBtn">もう一度受ける</button>' +
+    '</div>';
+  bindGo(v);
+  v.querySelector("#againBtn").addEventListener("click", function(){ S.attempt = null; saveState(); go("exam"); });
+}
+
+/* ---------------- 問題マップ ---------------- */
+function viewQmap(){
+  var v = document.getElementById("view");
+  var mode = S.qmap.mode, hidden = S.qmap.hidden;
+  var counts = {};
+  bucketList(mode).forEach(function(k){ counts[k] = 0; });
+  for(var n=1;n<=50;n++){ counts[bucketOf(LATEST.perQ[n].state, mode)]++; }
+
+  var cells = "";
+  for(var i=1;i<=50;i++){
+    var b = bucketOf(LATEST.perQ[i].state, mode);
+    var meta = bucketMeta(b, mode);
+    var dim = hidden.indexOf(b) >= 0;
+    cells += '<div class="qcell' + (dim ? " dim" : "") + '" style="background:' + meta.color + '" ' +
+             'title="問' + i + '：' + meta.label + '">' + i + '</div>';
+  }
+  v.innerHTML =
+    '<div class="page-title">問題マップ</div>' +
+    '<div class="page-desc">' + esc(LATEST.title) + '（架空）・50問の位置をそのまま並べています。</div>' +
+    '<div class="card">' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">' +
+        '<button class="btn" type="button" data-mode="FOUR" aria-pressed="' + (mode === "FOUR") + '">4分類</button>' +
+        '<button class="btn" type="button" data-mode="BINARY" aria-pressed="' + (mode === "BINARY") + '">正誤</button>' +
+      '</div>' +
+      '<div class="legend">' + bucketList(mode).map(function(k){
+        var meta = bucketMeta(k, mode);
+        return '<button type="button" data-bucket="' + k + '" aria-pressed="' + (hidden.indexOf(k) < 0) + '">' +
+               '<span class="dot" style="background:' + meta.color + '"></span>' + esc(meta.label) + ' ' + counts[k] + '</button>';
+      }).join("") + '</div>' +
+      '<div class="qmap">' + cells + '</div>' +
+      '<div class="small muted" style="margin-top:10px">凡例を押すと、その分類を伏せられます。「正誤」表示では 安定正解と要復習をまとめて「正解」にしますが、<b>採点不可は正解にも不正解にも入れません</b>。</div>' +
+    '</div>';
+  v.querySelectorAll("[data-mode]").forEach(function(b){
+    b.addEventListener("click", function(){ S.qmap.mode = b.getAttribute("data-mode"); S.qmap.hidden = []; saveState(); render(); });
+  });
+  v.querySelectorAll("[data-bucket]").forEach(function(b){
+    b.addEventListener("click", function(){
+      var k = b.getAttribute("data-bucket"), idx = S.qmap.hidden.indexOf(k);
+      if(idx < 0) S.qmap.hidden.push(k); else S.qmap.hidden.splice(idx,1);
+      saveState(); render();
+    });
+  });
+}
+
+/* ---------------- 科目・単元分析 ---------------- */
+function radarSvg(rows){
+  var size = 260, cx = size/2, cy = size/2 + 6, R = 88;
+  var N = rows.length;
+  function pt(i, r){
+    var ang = -Math.PI/2 + (i * 2*Math.PI / N);
+    return [cx + Math.cos(ang)*R*r, cy + Math.sin(ang)*R*r];
+  }
+  function poly(vals){
+    return vals.map(function(r,i){ var p = pt(i, Math.max(0, Math.min(1, r))); return p[0].toFixed(1) + "," + p[1].toFixed(1); }).join(" ");
+  }
+  var grid = [0.25,0.5,0.75,1].map(function(r){
+    return '<polygon points="' + poly(rows.map(function(){ return r; })) + '" fill="none" stroke="var(--border)" stroke-width="1" />';
+  }).join("");
+  var spokes = rows.map(function(_,i){
+    var p = pt(i,1);
+    return '<line x1="' + cx + '" y1="' + cy + '" x2="' + p[0].toFixed(1) + '" y2="' + p[1].toFixed(1) + '" stroke="var(--border)" />';
+  }).join("");
+  var labels = rows.map(function(r,i){
+    var p = pt(i, 1.24);
+    var anchor = p[0] < cx - 6 ? "end" : (p[0] > cx + 6 ? "start" : "middle");
+    return '<text x="' + p[0].toFixed(1) + '" y="' + (p[1]+4).toFixed(1) + '" font-size="10" fill="var(--fg-muted)" text-anchor="' + anchor + '">' + esc(r.subject) + '</text>';
+  }).join("");
+  return '<svg viewBox="0 0 ' + size + ' ' + (size+10) + '" width="100%" style="max-width:320px" role="img" aria-label="科目別の得点率（現在値と目標値・架空データ）">' +
+    grid + spokes +
+    '<polygon points="' + poly(rows.map(function(r){ return r.targetRate || 0; })) + '" fill="none" stroke="var(--fg-muted)" stroke-width="1.5" stroke-dasharray="5 4" />' +
+    '<polygon points="' + poly(rows.map(function(r){ return r.rate || 0; })) + '" fill="rgba(29,78,216,.16)" stroke="var(--brand)" stroke-width="2" />' +
+    labels + '</svg>';
+}
+function viewAnalysis(){
+  var v = document.getElementById("view");
+  var rows = subjectBreakdown(LATEST);
+
+  /* 単元ヒートマップ：単元 × 各測定の弱点率 */
+  var topics = [];
+  BLUEPRINT.forEach(function(b){ b.topics.forEach(function(t){ topics.push({ subject:b.subject, topic:t }); }); });
+  function rateFor(meas, subject, topic){
+    var cells = [];
+    for(var n=1;n<=50;n++){
+      if(subjectOf(n) !== subject || topicOf(n) !== topic) continue;
+      var r = weaknessRate(meas.perQ[n].cell);
+      if(r !== null) cells.push(r);
+    }
+    return averageRate(cells);
+  }
+  var heatRows = topics.map(function(t){
+    var vals = MEASUREMENTS.map(function(m){ return rateFor(m, t.subject, t.topic); });
+    return { subject:t.subject, topic:t.topic, vals:vals, avg:averageRate(vals) };
+  });
+  var dir = S.heat.dir, sortIdx = S.heat.sort;
+  if(sortIdx !== null && sortIdx !== undefined){
+    var key = function(r){ return sortIdx === "avg" ? r.avg : r.vals[sortIdx]; };
+    heatRows = heatRows.map(function(r,i){ return { r:r, i:i }; }).sort(function(a,b){
+      var av = key(a.r), bv = key(b.r);
+      if(av === null && bv === null) return a.i - b.i;
+      if(av === null) return 1;
+      if(bv === null) return -1;
+      return dir === "WEAK" ? bv - av : av - bv;
+    }).map(function(x){ return x.r; });
+  }
+  function heatColor(r){
+    if(r === null) return "var(--surface)";
+    var a = 0.10 + r * 0.62;
+    return "rgba(220,38,38," + a.toFixed(2) + ")";
+  }
+
+  v.innerHTML =
+    '<div class="page-title">科目・単元分析</div>' +
+    '<div class="page-desc">' + esc(LATEST.title) + ' までの架空データ。</div>' +
+    '<div class="grid c2">' +
+      card('<h3>科目別の得点率</h3>' + radarSvg(rows) +
+        '<div class="small" style="margin-top:8px">' +
+        '<span style="display:inline-flex;align-items:center;gap:6px;margin-right:12px"><svg width="26" height="8"><line x1="0" y1="4" x2="26" y2="4" stroke="var(--brand)" stroke-width="2"/></svg>現在値</span>' +
+        '<span style="display:inline-flex;align-items:center;gap:6px"><svg width="26" height="8"><line x1="0" y1="4" x2="26" y2="4" stroke="var(--fg-muted)" stroke-width="2" stroke-dasharray="5 4"/></svg>目標値</span>' +
+        '</div>') +
+      card('<h3>科目ごとの現在値と目標</h3>' +
+        '<div class="scroll-x"><table class="data" style="min-width:0"><thead><tr><th>科目</th><th class="num">正解</th><th class="num">得点率</th><th class="num">目標</th><th>状態</th></tr></thead><tbody>' +
+        rows.map(function(r){
+          var met = r.rate !== null && r.targetRate !== null && r.rate >= r.targetRate;
+          return '<tr><td>' + esc(r.subject) + '</td><td class="num">' + r.correct + ' / ' + r.total + '</td>' +
+                 '<td class="num">' + pct(r.rate) + '</td><td class="num">' + pct(r.targetRate) + '</td>' +
+                 '<td style="color:' + (met ? "var(--stable)" : "var(--risk)") + '">' + (met ? "目標到達" : "未達") + '</td></tr>';
+        }).join("") + '</tbody></table></div>' +
+        '<div class="small muted" style="margin-top:8px">問48 は採点対象外のため、5問免除の母数は 4 です。</div>') +
+    '</div>' +
+    card('<h3>単元ヒートマップ（弱点率）</h3>' +
+      '<div class="small muted" style="margin-bottom:8px">弱点率＝(勘違い＋迷い＋分からない) ÷ 判断した肢。判断が無い単元は「—」にして、0% とは表示しません。</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">' +
+        '<button class="btn" type="button" data-sort="avg">平均で並べ替え</button>' +
+        MEASUREMENTS.map(function(m,i){ return '<button class="btn" type="button" data-sort="' + i + '">' + esc(m.title.replace("デモ実力測定 ","")) + 'で並べ替え</button>'; }).join("") +
+        '<button class="btn" type="button" data-sort="reset">元に戻す</button>' +
+        '<span class="label" style="align-self:center">並び：' + (sortIdx === null || sortIdx === undefined ? "既定" : (dir === "WEAK" ? "要復習が多い順" : "安定している順")) + '</span>' +
+      '</div>' +
+      '<div class="scroll-x"><table class="heat"><thead><tr><th>単元</th><th>科目</th>' +
+        MEASUREMENTS.map(function(m){ return '<th>' + esc(m.title.replace("デモ実力測定 ","")) + '</th>'; }).join("") +
+        '<th>平均</th></tr></thead><tbody>' +
+        heatRows.map(function(r){
+          return '<tr><td>' + esc(r.topic) + '</td><td class="muted">' + esc(r.subject) + '</td>' +
+            r.vals.map(function(x){ return '<td style="background:' + heatColor(x) + '">' + pct(x) + '</td>'; }).join("") +
+            '<td style="background:' + heatColor(r.avg) + '"><b>' + pct(r.avg) + '</b></td></tr>';
+        }).join("") + '</tbody></table></div>');
+
+  v.querySelectorAll("[data-sort]").forEach(function(b){
+    b.addEventListener("click", function(){
+      var k = b.getAttribute("data-sort");
+      if(k === "reset"){ S.heat.sort = null; }
+      else {
+        var key = (k === "avg") ? "avg" : Number(k);
+        if(S.heat.sort === key) S.heat.dir = (S.heat.dir === "WEAK" ? "STABLE" : "WEAK");
+        else { S.heat.sort = key; S.heat.dir = "WEAK"; }
+      }
+      saveState(); render();
+    });
+  });
+}
+
+/* ---------------- 弱点 ---------------- */
+function viewWeak(){
+  var v = document.getElementById("view");
+  var risky = [], wrong = [];
+  for(var n=1;n<=50;n++){
+    var q = LATEST.perQ[n];
+    var row = { n:n, subject:subjectOf(n), topic:topicOf(n), cell:q.cell, rate:weaknessRate(q.cell) };
+    if(q.state === "RISK") risky.push(row);
+    if(q.state === "WRONG") wrong.push(row);
+  }
+  risky.sort(function(a,b){ return (b.rate||0) - (a.rate||0); });
+  wrong.sort(function(a,b){ return (b.rate||0) - (a.rate||0); });
+
+  function tbl(rows){
+    if(!rows.length) return '<p class="muted small" style="margin:0">該当なし。</p>';
+    return '<div class="scroll-x"><table class="data"><thead><tr><th>問</th><th>科目</th><th>単元</th><th class="num">勘違い</th><th class="num">迷い</th><th class="num">不明</th><th class="num">弱点率</th></tr></thead><tbody>' +
+      rows.map(function(r){
+        return '<tr><td>問' + r.n + '</td><td>' + esc(r.subject) + '</td><td>' + esc(r.topic) + '</td>' +
+          '<td class="num">' + r.cell.misconception + '</td><td class="num">' + r.cell.uncertain + '</td><td class="num">' + r.cell.unknown + '</td>' +
+          '<td class="num"><b>' + pct(r.rate) + '</b></td></tr>';
+      }).join("") + '</tbody></table></div>';
+  }
+  v.innerHTML =
+    '<div class="page-title">弱点</div>' +
+    '<div class="page-desc">' + esc(LATEST.title) + '（架空）の肢の判断から抽出しています。</div>' +
+    '<div class="note"><b>正解＝理解している、とは限りません。</b> 正解した問題でも、迷った肢や勘違いしていた肢があれば「正解だが要復習」として拾い上げます。四択アプリの正答率だけでは、この層が見えません。</div>' +
+    card('<h3 style="color:var(--risk)">正解だが要復習（' + risky.length + '問）</h3>' + tbl(risky)) +
+    card('<h3 style="color:var(--wrong)">不正解（' + wrong.length + '問）</h3>' + tbl(wrong)) +
+    card('<h3 style="color:var(--na)">採点不可（1問）</h3>' +
+      '<p class="small" style="margin:0">問' + UNSCORABLE_Q + '：' + esc(UNSCORABLE_REASON) + '。0点にはせず、得点の母数からも弱点の母数からも外しています。</p>');
+}
+
+/* ---------------- 復習 ---------------- */
+function viewReview(){
+  var v = document.getElementById("view");
+  var queue = [];
+  for(var n=1;n<=50;n++){
+    var q = LATEST.perQ[n];
+    if(q.state !== "RISK" && q.state !== "WRONG") continue;
+    var r = weaknessRate(q.cell);
+    queue.push({ n:n, subject:subjectOf(n), topic:topicOf(n), state:q.state, rate:r,
+                 minutes: q.state === "WRONG" ? 4 : 2 });
+  }
+  queue.sort(function(a,b){
+    if(a.state !== b.state) return a.state === "WRONG" ? -1 : 1;
+    return (b.rate||0) - (a.rate||0);
+  });
+  var today = [], acc = 0;
+  queue.forEach(function(x){ if(acc + x.minutes <= 30){ today.push(x); acc += x.minutes; } });
+  S.reviewDone = S.reviewDone || {};
+
+  v.innerHTML =
+    '<div class="page-title">復習</div>' +
+    '<div class="page-desc">弱点から作った「今日の30分セット」（架空データ）。</div>' +
+    '<div class="grid c3">' +
+      card('<div class="label">復習キュー全体</div><div class="stat">' + queue.length + ' <small>問</small></div>') +
+      card('<div class="label">今日の30分セット</div><div class="stat">' + today.length + ' <small>問</small></div><div class="label">目安 ' + acc + ' 分</div>') +
+      card('<div class="label">完了</div><div class="stat" style="color:var(--stable)">' + Object.keys(S.reviewDone).filter(function(k){ return S.reviewDone[k]; }).length + ' <small>問</small></div>') +
+    '</div>' +
+    '<div class="note">年度によって数字が変わる統計の問題は、得点には数えても復習キューには載せません。いま覚え直す知識ではないためです。</div>' +
+    card('<h3>今日やる分</h3>' +
+      '<div class="scroll-x"><table class="data"><thead><tr><th></th><th>問</th><th>科目</th><th>単元</th><th>理由</th><th class="num">目安</th></tr></thead><tbody>' +
+      today.map(function(x){
+        return '<tr><td><input type="checkbox" data-done="' + x.n + '"' + (S.reviewDone[x.n] ? " checked" : "") + ' /></td>' +
+          '<td>問' + x.n + '</td><td>' + esc(x.subject) + '</td><td>' + esc(x.topic) + '</td>' +
+          '<td><span class="dot" style="background:' + OUTCOME[x.state].color + '"></span> ' + esc(OUTCOME[x.state].label) + '</td>' +
+          '<td class="num">' + x.minutes + '分</td></tr>';
+      }).join("") + '</tbody></table></div>');
+  v.querySelectorAll("[data-done]").forEach(function(cb){
+    cb.addEventListener("change", function(){
+      S.reviewDone[cb.getAttribute("data-done")] = cb.checked; saveState(); render();
+    });
+  });
+}
+
+/* ---------------- 用語辞書 ---------------- */
+function viewGlossary(){
+  var v = document.getElementById("view");
+  v.innerHTML =
+    '<div class="page-title">用語辞書</div>' +
+    '<div class="page-desc">デモ用の簡略な説明です。学習用の正確な定義ではありません。</div>' +
+    '<div class="card"><input id="gq" type="search" placeholder="用語を検索" ' +
+      'style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;font:inherit" /></div>' +
+    '<div id="glist"></div>';
+  function paint(){
+    var qv = (v.querySelector("#gq").value || "").trim();
+    var list = GLOSSARY.filter(function(g){
+      return !qv || g.term.indexOf(qv) >= 0 || g.reading.indexOf(qv) >= 0 || g.body.indexOf(qv) >= 0;
+    });
+    v.querySelector("#glist").innerHTML = list.length
+      ? list.map(function(g){
+          return card('<h3>' + esc(g.term) + ' <span class="label" style="font-weight:400">' + esc(g.reading) + '</span></h3>' +
+                      '<div class="small">' + esc(g.body) + '</div>');
+        }).join("")
+      : card('<p class="muted small" style="margin:0">見つかりませんでした。</p>');
+  }
+  v.querySelector("#gq").addEventListener("input", paint);
+  paint();
+}
+
+/* ---------------- みんなの成績 ---------------- */
+function viewPeers(){
+  var v = document.getElementById("view");
+  var rows = PEERS.slice().sort(function(a,b){ return (b.score/b.max) - (a.score/a.max); });
+  var avg = rows.reduce(function(a,r){ return a + r.score/r.max; }, 0) / rows.length;
+  var view = S.peerView || "TABLE";
+
+  var body;
+  if(view === "TABLE"){
+    body = '<div class="scroll-x"><table class="data"><thead><tr><th>受講生</th><th class="num">得点</th><th class="num">得点率</th><th class="num">実力測定</th><th>最新受験日</th></tr></thead><tbody>' +
+      rows.map(function(r){
+        return '<tr class="' + (r.self ? "self" : "") + '"><td>' + esc(r.name) + (r.self ? ' <span class="badge">あなた</span>' : "") + '</td>' +
+          '<td class="num">' + r.score + ' / ' + r.max + '</td><td class="num"><b>' + pct(r.score/r.max) + '</b></td>' +
+          '<td class="num">' + r.count + '回</td><td class="muted small">' + esc(r.date) + '</td></tr>';
+      }).join("") +
+      '<tr><td><b>教室平均</b></td><td class="num muted">—</td><td class="num"><b>' + pct(avg) + '</b></td><td class="num muted">—</td><td></td></tr>' +
+      '</tbody></table></div>';
+  } else {
+    body = '<div style="display:flex;flex-direction:column;gap:8px">' + rows.map(function(r){
+      var p = r.score / r.max;
+      return '<div>' +
+        '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px">' +
+          '<span>' + esc(r.name) + (r.self ? ' <span class="badge">あなた</span>' : "") + '</span>' +
+          '<span class="muted">' + pct(p) + '（' + r.score + '/' + r.max + '）</span></div>' +
+        '<div style="background:var(--surface-muted);border-radius:6px;height:16px;position:relative;overflow:hidden">' +
+          '<div style="width:' + (p*100).toFixed(1) + '%;height:100%;background:' + (r.self ? "var(--brand)" : "#93C5FD") + '"></div>' +
+          '<div style="position:absolute;left:' + (avg*100).toFixed(1) + '%;top:0;bottom:0;width:2px;background:var(--wrong)"></div>' +
+        '</div></div>';
+    }).join("") +
+    '<div class="small muted" style="margin-top:4px"><span style="display:inline-block;width:10px;height:2px;background:var(--wrong);vertical-align:middle"></span> 教室平均 ' + pct(avg) + '</div></div>';
+  }
+
+  v.innerHTML =
+    '<div class="page-title">みんなの成績</div>' +
+    '<div class="page-desc">' + esc(PEER_CLASSROOM) + ' ・ 実力測定の点数だけを比べています。</div>' +
+    '<div class="note"><b>架空の受講生です。</b> 共有するのは 表示名・点数・満点・受験回数・最新受験日 だけで、回答・肢ごとの判断・メモ・復習履歴は共有しません。教室ごとにON/OFFでき、既定はOFFです。満点が違っても比べられるよう、比較は得点率を中心にしています。</div>' +
+    '<div class="card">' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">' +
+        '<button class="btn" type="button" data-pv="TABLE" aria-pressed="' + (view === "TABLE") + '">表</button>' +
+        '<button class="btn" type="button" data-pv="CHART" aria-pressed="' + (view === "CHART") + '">グラフ</button>' +
+      '</div>' + body +
+    '</div>';
+  v.querySelectorAll("[data-pv]").forEach(function(b){
+    b.addEventListener("click", function(){ S.peerView = b.getAttribute("data-pv"); saveState(); render(); });
+  });
+}
+
+/* ---------------- リセット確認（ブラウザ標準ダイアログは使わない） ---------------- */
+function askReset(){
+  var ov = el('<div class="overlay"><div class="modal" role="dialog" aria-modal="true" aria-label="デモをリセット">' +
+    '<h3>デモをリセットしますか？</h3>' +
+    '<p>このデモ専用の保存データ（体験ミニ模試の回答・表示設定・復習のチェック）だけを消します。他のサイトやアプリのデータには触れません。</p>' +
+    '<div class="row"><button class="btn" type="button" data-x="no">やめる</button>' +
+    '<button class="btn danger" type="button" data-x="yes">リセットする</button></div></div></div>');
+  document.body.appendChild(ov);
+  ov.querySelector('[data-x="no"]').addEventListener("click", function(){ ov.remove(); });
+  ov.querySelector('[data-x="yes"]').addEventListener("click", function(){
+    resetDemo(); ov.remove(); go("dashboard"); render();
+  });
+}
+
+/* ---------------- ルーティング ---------------- */
+function render(){
+  if(tickHandle){ clearInterval(tickHandle); tickHandle = null; }
+  renderTabs();
+  var r = currentRoute();
+  ({ dashboard:viewDashboard, exam:viewExam, result:viewResult, qmap:viewQmap,
+     analysis:viewAnalysis, weak:viewWeak, review:viewReview,
+     glossary:viewGlossary, peers:viewPeers })[r]();
+  window.scrollTo(0, 0);
+}
+document.getElementById("resetBtn").addEventListener("click", askReset);
+window.addEventListener("hashchange", render);
+render();
+</script>
+</body>
+</html>
